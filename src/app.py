@@ -153,6 +153,11 @@ def run_app():
             f"Общая средняя длина текстового сообщения: {overall_avg_length:.1f} символов",
             tag="p",
         )
+        overall_total_chars = text_df["text_length"].sum()
+        center_text(
+            f"Общее количество символов в переписке: {overall_total_chars}", tag="p"
+        )
+
         sender_text = (
             text_df[text_df["sender"].notna()]
             .groupby("sender")["text_length"]
@@ -169,6 +174,26 @@ def run_app():
             labels={"sender": "Отправитель", "avg_length": "Средняя длина (символов)"},
         )
         st.plotly_chart(fig_text, use_container_width=True)
+
+        sender_total_chars = (
+            text_df[text_df["sender"].notna()]
+            .groupby("sender")["text_length"]
+            .sum()
+            .reset_index()
+        )
+        sender_total_chars.columns = ["sender", "total_chars"]
+        fig_total_chars = px.bar(
+            sender_total_chars.sort_values("total_chars", ascending=True),
+            x="total_chars",
+            y="sender",
+            orientation="h",
+            title="Общее количество символов по отправителям",
+            labels={
+                "sender": "Отправитель",
+                "total_chars": "Общее количество символов",
+            },
+        )
+        st.plotly_chart(fig_total_chars, use_container_width=True)
 
         sender_df = df[df["sender"].notna()]
         if not sender_df.empty:

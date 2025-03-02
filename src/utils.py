@@ -91,8 +91,14 @@ def plot_media_stats(media_df, label):
     """
     if not media_df.empty and media_df["duration"].notna().any():
         avg_duration = media_df["duration"].dropna().mean()
+        total_duration = media_df["duration"].dropna().sum()
+        total_minutes = total_duration / 60
         center_text(f"Средняя длительность {label}: {avg_duration:.1f} сек.", tag="p")
         center_text(f"Количество {label}: {len(media_df)}", tag="p")
+        center_text(
+            f"Общая длина {label}: {total_duration:.1f} сек. (~{total_minutes:.1f} мин.)",
+            tag="p",
+        )
 
         # Группировка данных по отправителям, у которых есть информация о длительности
         media_sender_df = media_df[
