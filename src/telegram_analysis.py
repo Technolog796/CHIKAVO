@@ -131,10 +131,11 @@ def get_word_frequency(text, stop_words=None, top_n=20):
         list: Список кортежей (слово, частота) для top_n слов.
     """
     text = text.lower()
-    text = re.sub(r"[^а-яa-z\s]", "", text)
+    text = re.sub(r"[^а-яёa-z\s]", "", text)
     words = text.split()
     if stop_words is None:
         stop_words = set()
     words = [w for w in words if w not in stop_words]
     counter = Counter(words)
+
     return counter.most_common(top_n)
