@@ -230,7 +230,7 @@ def run_app():
     # -----------------------------------------------
     # 7. Анализ эмодзи (в тексте)
     # -----------------------------------------------
-    st.subheader("Анализ эмодзи")
+    center_text("Анализ эмодзи", tag="h3")
     if emojis_list:
         emoji_counter = Counter(emojis_list)
         top_emojis = emoji_counter.most_common(10)
@@ -253,7 +253,7 @@ def run_app():
     # -----------------------------------------------
     # 8. Анализ реакций (эмодзи в reactions)
     # -----------------------------------------------
-    center_text("Статистика по реакциям (эмодзи)", tag="h3")
+    center_text("Статистика по реакциям на сообщения", tag="h3")
 
     reaction_emoji_counter = Counter()
     reaction_list = []
@@ -270,7 +270,7 @@ def run_app():
                         reaction_list.append({"user": user_from, "emoji": emoji_used})
     # Суммарное количество эмоций в реакциях
     total_reactions = sum(reaction_emoji_counter.values())
-    center_text(f"Всего эмоций поставлено: {total_reactions}", tag="p")
+    center_text(f"Всего эмодзи поставлено: {total_reactions}", tag="p")
 
     if reaction_emoji_counter:
         top_reaction_emojis = reaction_emoji_counter.most_common(10)
@@ -297,7 +297,7 @@ def run_app():
             user_reaction_counts,
             x="user",
             y="count",
-            title="Количество использованных эмодзи по пользователям (recent)",
+            title="Количество использованных эмодзи по пользователям",
             labels={"user": "Пользователь", "count": "Количество эмодзи"},
         )
         st.plotly_chart(fig_user_reactions, use_container_width=True)
@@ -305,7 +305,8 @@ def run_app():
     # -----------------------------------------------
     # 9. Частота слов
     # -----------------------------------------------
-    st.subheader("Самые частые слова в переписке")
+    center_text("Топ-20 самых частых слов в переписке", tag="h3")
+
     if corpus:
         stop_words = load_stopwords()
         top_words = get_word_frequency(corpus, stop_words=stop_words, top_n=20)
@@ -315,7 +316,6 @@ def run_app():
                 df_words,
                 x="Слово",
                 y="count",
-                title="Топ-20 самых частых слов",
                 labels={"Слово": "Слово", "count": "Количество"},
             )
             st.plotly_chart(fig_words, use_container_width=True)
