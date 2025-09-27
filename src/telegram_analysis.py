@@ -1,12 +1,19 @@
+from typing import Tuple, Optional, List, Dict
+
 import pandas as pd
 import streamlit as st
 from datetime import datetime
 import re
 from collections import Counter
+
 from src.utils import extract_emojis
 
 
-def process_json(data):
+def process_json(
+    data: dict,
+) -> Tuple[
+    Optional[pd.DataFrame], Optional[str], Optional[pd.DataFrame], Optional[List[str]]
+]:
     """
     Обрабатывает JSON-данные экспорта из Telegram и извлекает информацию по сообщениям.
 
@@ -20,51 +27,62 @@ def process_json(data):
             - df (DataFrame): Подробная таблица с информацией по каждому сообщению.
             - emojis_list (list): Список эмодзи, извлечённых из текстовых сообщений.
     """
-    messages = data.get("messages", [])
-    rows = []
-    text_corpus = []
-    emojis_list = []
-    total = len(messages)
+    messages: List[dict] = data.get("messages", [])
+    rows: List[dict] = []
+    text_corpus: List[str] = []
+    emojis_list: List[str] = []
+    total: int = len(messages)
     progress_bar = st.progress(0)
 
     for i, msg in enumerate(messages):
         progress_bar.progress((i + 1) / total)
         if "date" not in msg:
             continue
+        if msg.get("type") and msg.get("type") != "message":
+            # пропускаем сервисные события (например, смена фото, добавление участников)
+            continue
         try:
-            dt = datetime.fromisoformat(msg["date"])
+            dt: datetime = datetime.fromisoformat(msg["date"])
         except Exception as e:
             st.write(f"Ошибка при обработке даты {msg.get('date')}: {e}")
             continue
 
-        # Получаем отправителя; если отсутствует или равен "Unknown", оставляем как None
-        sender = msg.get("from")
+        sender: Optional[str] = msg.get("from")
         if not sender or sender.strip() == "" or sender.lower() == "unknown":
             sender = None
 
-        # Инициализация полей по умолчанию
-        mtype = "text"
-        duration = None
-        sticker_emoji = None
+        mtype: str = "text"
+        duration: Optional[float] = None
+        sticker_emoji: Optional[str] = msg.get("sticker_emoji")
+        media_type: Optional[str] = msg.get("media_type")
+        mime_type: str = (msg.get("mime_type") or "").lower()
+        file_path = msg.get("file")
 
-        media_type = msg.get("media_type")
-        if media_type == "voice_message":
+        if media_type == "voice_message" or "audio" in mime_type or mime_type.endswith("ogg"):
             mtype = "audio/voice"
-            duration = msg.get("duration_seconds")
-        elif media_type == "video_message":
+            duration = msg.get("duration_seconds") or msg.get("duration")
+        elif media_type == "video_message" or "video" in mime_type:
             mtype = "video"
-            duration = msg.get("duration_seconds")
-        elif media_type == "sticker":
+            duration = msg.get("duration_seconds") or msg.get("duration")
+        elif media_type == "sticker" or sticker_emoji:
             mtype = "sticker"
-            sticker_emoji = msg.get("sticker_emoji")
-        elif "photo" in msg:
+        elif media_type in {"animation", "gif"} or mime_type in {"image/gif", "video/mp4"}:
+            mtype = "video"
+        elif "photo" in msg and msg["photo"]:
             mtype = "photo"
+        elif isinstance(file_path, str) and file_path:
+            if mime_type.startswith("image/") and mime_type != "image/webp":
+                mtype = "photo"
+            elif mime_type.startswith("video/"):
+                mtype = "video"
+            elif mime_type in {"image/webp", "application/x-tgsticker"}:
+                mtype = "sticker"
+            else:
+                mtype = "file"
         elif "document" in msg:
             mtype = "file"
-        else:
-            mtype = "text"
 
-        row = {
+        row: Dict = {
             "dt": dt,
             "date": dt.date(),
             "hour": dt.hour,
@@ -76,10 +94,9 @@ def process_json(data):
             "text_length": 0,
         }
 
-        # Обработка текстовых сообщений
         if mtype == "text":
             text_content = msg.get("text", "")
-            text = ""
+            text: str = ""
             if isinstance(text_content, list):
                 for item in text_content:
                     if isinstance(item, dict) and "text" in item:
@@ -93,8 +110,7 @@ def process_json(data):
             row["text_length"] = len(text)
             if text:
                 text_corpus.append(text)
-            # Извлечение эмодзи из текста
-            emojis_found = extract_emojis(text)
+            emojis_found: List[str] = extract_emojis(text)
             emojis_list.extend(emojis_found)
 
         rows.append(row)
@@ -104,8 +120,10 @@ def process_json(data):
         return None, None, None, None
 
     df = pd.DataFrame(rows)
+    if "sticker_emoji" in df.columns:
+        sticker_mask = df["sticker_emoji"].notna() & (df["sticker_emoji"] != "")
+        df.loc[sticker_mask, "type"] = "sticker"
 
-    # Группировка сообщений по датам для построения временного ряда
     daily_counts = df.groupby("date").size().reset_index(name="count")
     start_date = daily_counts["date"].min()
     end_date = daily_counts["date"].max()
@@ -118,7 +136,9 @@ def process_json(data):
     return daily_counts, " ".join(text_corpus), df, emojis_list
 
 
-def get_word_frequency(text, stop_words=None, top_n=20):
+def get_word_frequency(
+    text: str, stop_words: Optional[set] = None, top_n: int = 20
+) -> List[Tuple[str, int]]:
     """
     Определяет частотность слов в переданном тексте с исключением стоп-слов.
 
@@ -132,10 +152,10 @@ def get_word_frequency(text, stop_words=None, top_n=20):
     """
     text = text.lower()
     text = re.sub(r"[^а-яёa-z\s]", "", text)
-    words = text.split()
+    words: List[str] = text.split()
     if stop_words is None:
         stop_words = set()
     words = [w for w in words if w not in stop_words]
-    counter = Counter(words)
+    counter: Counter = Counter(words)
 
     return counter.most_common(top_n)
