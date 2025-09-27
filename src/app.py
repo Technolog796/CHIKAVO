@@ -478,7 +478,8 @@ def run_app() -> NoReturn:
                 y="count",
                 labels={"month_label": "Месяц", "count": "Сообщений"},
             )
-            fig_monthly_summary.update_traces(mode="lines+markers", line_shape="spline", fill="tozeroy")
+            fig_monthly_summary.update_traces(mode="lines+markers", fill="tozeroy")
+            fig_monthly_summary.update_traces(selector=dict(type="scatter"), line_shape="spline")
             fig_monthly_summary.update_layout(
                 template=plotly_template,
                 hovermode="x unified",
@@ -527,7 +528,7 @@ def run_app() -> NoReturn:
                 y="count",
                 labels={"date_dt": "Дата", "count": "Сообщений"},
             )
-            fig_daily.update_traces(line_shape="spline")
+            fig_daily.update_traces(selector=dict(type="scatter"), line_shape="spline")
             min_date = daily_counts["date_dt"].min()
             max_date = daily_counts["date_dt"].max()
             tick_dates: List[pd.Timestamp] = []
@@ -554,12 +555,12 @@ def run_app() -> NoReturn:
             labels={"hour_label": "Час дня", "count": "Сообщений"},
         )
         fig_hourly.update_traces(
-            line_shape="spline",
             mode="lines+markers",
             marker=dict(size=6, color=highlight_color),
             line=dict(color=highlight_color, width=3),
             fillcolor="rgba(56, 189, 248, 0.25)",
         )
+        fig_hourly.update_traces(selector=dict(type="scatter"), line_shape="spline")
         fig_hourly.update_layout(template=plotly_template)
         render_plotly(fig_hourly, hourly_col)
 
@@ -589,12 +590,12 @@ def run_app() -> NoReturn:
                 labels={"date_label": "Дата", "count": "Сообщений"},
             )
             fig_last_week.update_traces(
-                line_shape="spline",
                 mode="lines+markers",
                 marker=dict(size=6, color=highlight_color),
                 line=dict(color=highlight_color, width=3),
                 fillcolor="rgba(59, 130, 246, 0.25)",
             )
+            fig_last_week.update_traces(selector=dict(type="scatter"), line_shape="spline")
             fig_last_week.update_layout(template=plotly_template)
             render_plotly(fig_last_week)
 
@@ -628,7 +629,8 @@ def run_app() -> NoReturn:
                     labels={"date": "Дата", "count": "Сообщений", "year": "Год"},
                     color_discrete_map=year_color_map,
                 )
-                fig_yearly_trend.update_traces(mode="lines", line_shape="spline")
+                fig_yearly_trend.update_traces(mode="lines")
+                fig_yearly_trend.update_traces(selector=dict(type="scatter"), line_shape="spline")
                 fig_yearly_trend.update_layout(template=plotly_template, hovermode="x unified")
                 for trace in fig_yearly_trend.data:
                     if trace.name == "2025":
